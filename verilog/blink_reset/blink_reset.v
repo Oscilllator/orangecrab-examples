@@ -31,11 +31,12 @@ module top (
 
     // Reset logic on button press.
     // this will enter the bootloader
-    reg reset_sr = 1'b1;
-    always @(posedge clk48) begin
-        reset_sr <= {usr_btn};
-    end
-    assign rst_n = reset_sr;
+//    reg reset_sr = 1'b1;
+//    always @(posedge clk48) begin
+//        reset_sr <= {usr_btn};
+//    end
+//    assign rst_n = reset_sr;
+    assign rst_n = usr_btn;
 
 
 endmodule

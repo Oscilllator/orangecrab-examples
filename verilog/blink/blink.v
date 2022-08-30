@@ -11,8 +11,7 @@ module top (
     output rgb_led0_g,
     output rgb_led0_b
 );
-    // Create a 27 bit register
-    reg [26:0] counter = 0;
+    reg [28:0] counter = 0;
 
     // Every positive edge increment register by 1
     always @(posedge clk48) begin
@@ -20,8 +19,8 @@ module top (
     end
 
     // Output inverted values of counter onto LEDs
-    assign rgb_led0_r = ~counter[24];
-    assign rgb_led0_g = ~counter[25];
+    assign rgb_led0_r = ~counter[22];
+    assign rgb_led0_g = ~counter[23];
     assign rgb_led0_b = 1;
 
 
