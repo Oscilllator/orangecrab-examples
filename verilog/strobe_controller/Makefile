@@ -1,4 +1,4 @@
-PROJ=ring_oscillator
+PROJ=strobe_controller
 
 # `r0.1` or `r0.2`
 VERSION:=r0.2
@@ -41,7 +41,7 @@ dfu: ${PROJ}.dfu
 	$(COPY) $< $@
 	dfu-suffix -v 1209 -p 5af0 -a $@
 
-# clean:
-# 	$(RM) -f ${PROJ}.svf ${PROJ}.bit ${PROJ}.config ${PROJ}.json ${PROJ}.dfu 
+clean:
+	$(RM) -f ${PROJ}.svf ${PROJ}.bit ${PROJ}.config ${PROJ}.json ${PROJ}.dfu 
 
 .PHONY: prog clean
