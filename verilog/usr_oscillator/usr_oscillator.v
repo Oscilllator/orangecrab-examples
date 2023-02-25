@@ -84,16 +84,16 @@ module debounce (
     input in,
     input[19:0] length,
 
-    output out_
+    output out
 );
     reg[20:0] counter;
     always @(posedge clk)
         if (in) begin
             counter <= length;
             if (counter == 0) begin
-                out_ <= 1;        
+                out <= 1;        
             end else begin
-               out_ <= 0; 
+               out <= 0; 
             end
         end else begin
             if (counter > 0) begin
