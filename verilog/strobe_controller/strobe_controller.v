@@ -7,9 +7,9 @@ C9 - pin 11
 */
 module top (
     input clk48,
-    input usr_btn_b,
+    input gpio_1,
 
-    output usr_btn_a,
+    output gpio_0,
     output rgb_led0_r,
     output rgb_led0_g,
     output rgb_led0_b,
@@ -20,7 +20,7 @@ module top (
     reg in_edge;
     pos_edge input_edge(
         .clk(clk48),
-        .in(usr_btn_b),
+        .in(gpio_1),
         .out(in_edge)
     );
 
@@ -39,14 +39,14 @@ module top (
         .in(in_divider_reset),
         .out(divided_edge)
     );
-    // assign usr_btn_a = divided_edge;
+    // assign gpio_0 = divided_edge;
 
     reg[63:0] pulse_width = 480;
     pulse_stretch stretch_output(
         .clk(clk48),
         .in(divided_edge),
         .length(pulse_width),
-        .out_(usr_btn_a)
+        .out_(gpio_0)
     );
     
 
@@ -57,8 +57,8 @@ module top (
     // // wire led_state = (output_counter > period / 2) ? 1 : 0;
     // wire led_state = (output_counter < pulse_width) ? 1 : 0;
     // assign rgb_led0_b = led_state;
-    // // assign usr_btn_a = usr_btn_b ? led_state : 0;
-    // assign usr_btn_a = led_state;
+    // // assign gpio_0 = gpio_1 ? led_state : 0;
+    // assign gpio_0 = led_state;
     // // counter for flashing the LED at the current user saved state.
 
 
@@ -172,9 +172,9 @@ endmodule
 /*
 
 
-    // assign rgb_led0_r = ~usr_btn_a;
-    assign rgb_led0_r = ~usr_btn_a;
-    assign rgb_led0_g = ~usr_btn_b;
+    // assign rgb_led0_r = ~gpio_0;
+    assign rgb_led0_r = ~gpio_0;
+    assign rgb_led0_g = ~gpio_1;
     assign rgb_led0_b = 1;
 
 
@@ -189,7 +189,7 @@ endmodule
     // 50% duty cycle of LED:
     wire led_state = (output_counter > period / 2) ? 1 : 0;
     assign rgb_led0_b = led_state;
-    assign usr_btn_a = led_state;
+    assign gpio_0 = led_state;
     counter_64bit period_counter_instantiation(
         .clk(clk48),
         .out_value(output_counter),
@@ -199,15 +199,15 @@ endmodule
     // wire in_debounced;
     // debounce debounce_input(
     //     .clk(clk48),
-    //     .in(usr_btn_b),
+    //     .in(gpio_1),
     //     .length(128),
-    //     .out_(usr_btn_a)
+    //     .out_(gpio_0)
     // );
 
     // pulse_stretch stretch_output(
     //     .clk(clk48),
-    //     .in(usr_btn_b),
+    //     .in(gpio_1),
     //     .length(pulse_width),
-    //     .out_(usr_btn_a)
+    //     .out_(gpio_0)
     // );
 */
