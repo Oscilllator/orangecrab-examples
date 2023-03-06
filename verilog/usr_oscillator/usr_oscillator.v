@@ -4,8 +4,8 @@
 
 module top (
     input clk48,
-    input usr_btn_b,
-    output usr_btn_a,
+    input scl,
+    output sda,
 
     output rgb_led0_r,
     output rgb_led0_g,
@@ -19,11 +19,11 @@ module top (
     reg [63:0] period = 48000000;// 1Hz
 
     // Turn the high side of the switch on
-    assign usr_btn_a = 1;
+    assign sda = 1;
 
     reg btn_state = 1'b0;
     always @(posedge clk48)
-        if (usr_btn_b_debounced) begin
+        if (scl_debounced) begin
             period <= input_counter;
             // period <= period / 2;
             rgb_led0_g <= 0;
@@ -54,12 +54,12 @@ module top (
         .reset(period_reset)
     );
 
-    wire usr_btn_b_debounced;
+    wire scl_debounced;
     debounce debounce_input(
         .clk(clk48),
-        .in(usr_btn_b),
+        .in(scl),
         .length(48000),
-        .out_(usr_btn_b_debounced)
+        .out_(scl_debounced)
     );
 
     // Reset when the onboard button is pressed

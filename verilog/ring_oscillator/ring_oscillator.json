@@ -21397,11 +21397,11 @@
           "direction": "output",
           "bits": [ 4 ]
         },
-        "usr_btn_a": {
+        "sda": {
           "direction": "output",
           "bits": [ "x" ]
         },
-        "usr_btn_b": {
+        "scl": {
           "direction": "output",
           "bits": [ "0" ]
         },
@@ -29616,14 +29616,14 @@
             "src": "ring_oscillator.v:15.11-15.18"
           }
         },
-        "usr_btn_a": {
+        "sda": {
           "hide_name": 0,
           "bits": [ "x" ],
           "attributes": {
             "src": "ring_oscillator.v:11.12-11.21"
           }
         },
-        "usr_btn_b": {
+        "scl": {
           "hide_name": 0,
           "bits": [ "0" ],
           "attributes": {

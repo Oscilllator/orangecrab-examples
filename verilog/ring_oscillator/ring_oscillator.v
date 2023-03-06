@@ -8,13 +8,13 @@ module top (
     output rgb_led0_r,
     output rgb_led0_g,
     output rgb_led0_b,
-    output usr_btn_a,
-    output usr_btn_b,
+    output sda,
+    output scl,
 
     output rst_n,
     input usr_btn
 );
-    assign usr_btn_b = 0;
+    assign scl = 0;
 
     wire  c1 = ~c2;
     wire c2 = ~c3;

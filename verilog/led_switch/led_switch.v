@@ -8,8 +8,8 @@
 
 module top (
     input clk48,
-    input usr_btn_b,
-    output usr_btn_a,
+    input scl,
+    output sda,
 
     output rgb_led0_r,
     output rgb_led0_g,
@@ -20,10 +20,10 @@ module top (
 );
 
     // Turn the high side of the switch on
-    assign usr_btn_a = 1;
+    assign sda = 1;
 
     // Assign to inverse cause led is active low
-    assign rgb_led0_b = ~usr_btn_b;
+    assign rgb_led0_b = ~scl;
     // turn other LED's off:
     assign rgb_led0_r = 1;
     assign rgb_led0_g = 1;
