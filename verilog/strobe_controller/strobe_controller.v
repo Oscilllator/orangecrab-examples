@@ -21,89 +21,97 @@ module top (
     output rst_n,
     input usr_btn
 );
+    wire led_strobe = gpio_0;
+    wire in_pulse = gpio_1;
+    wire camera_pulse_out = gpio_13;
 
-    reg [63:0] delay; 
+
+    // input is a long pulse from the laser, make is a 1 cycle pulse.
+    reg in_edge;
+    pos_edge input_edge(
+        .clk(clk48),
+        .in(in_pulse),
+        .out(in_edge)
+    );
+
+
+    // Propeller has more than one blade and we want to trigger on the same
+    // one each time.
+    reg [63:0] in_divisor = 1;
+    reg [63:0] divisor_state;
+    wire in_divider_reset = divisor_state >= in_divisor;
+    counter_64bit input_divider(
+        .clk(in_edge),
+        .out_value(divisor_state),
+        .reset(in_divider_reset)
+    );
+
+    // the above module produces a 50% duty cycle wave, make it a pulse:
+    reg divided_edge;
+    pos_edge divider_edge(
+        .clk(clk48),
+        .in(in_divider_reset),
+        .out(divided_edge)
+    );
+
+    reg [63:0] usr_knob_delay; 
     usr_knob usr_knob_instance(
         .clk(clk48),
         .gpio_drv(sda),
         .gpio_meas(gpio_12),
-        .period_out(delay),
+        .period_out(usr_knob_delay),
+    );
+    reg [63:0] led_pulse_delay_state;
+    wire led_strobe_delayed = led_pulse_delay_state == usr_knob_delay;
+    counter_64bit led_pulse_delay( // 64 bit => never overflows :)
+        .clk(clk48),
+        .out_value(led_pulse_delay_state),
+        .reset(divided_edge)
     );
 
+    // we want to trigger the flash as often as possible. That way
+    // we won't be triggering any seizures with a 24Hz rate.
+    // reg[63:0] led_pulse_width = 240;
+    reg[63:0] led_pulse_width = 2400;
+    pulse_stretch stretch_flash(
+        .clk(clk48),
+        .in(led_strobe_delayed),
+        .length(led_pulse_width),
+        .out_(led_strobe)
+    );
+    // assign led_strobe = divided_edge;
+
+    // Produce a reference wave at the nominal camera frame rate.
     // Stuff for camera_sync
-    reg [63:0] delay_counter;
-    wire camera_rate = delay_counter >= delay;
+    reg [63:0] camera_hz = 30;
+    reg [63:0] camera_period_clk48 = 48000000 / camera_hz;
+    reg [63:0] camera_rate_state;
+    wire camera_wave_reference = camera_rate_state >= camera_period_clk48;
     counter_64bit camera_rate_generator(
         .clk(clk48),
-        .out_value(delay_counter),
-        .reset(camera_rate)
+        .out_value(camera_rate_state),
+        .reset(camera_wave_reference)
     );
-    assign gpio_1 = camera_rate;
-    assign gpio_13 = gpio_12;
 
-  
-    // assign gpio_13 = gpio_1;
-    // reg in_edge;
-    // pos_edge input_edge(
-    //     .clk(clk48),
-    //     .in(gpio_1),
-    //     .out(in_edge)
-    // );
+    // produce a pulse at the same time as divided edge but occurring at the
+    // same rate as camera_hz
+    reg camera_wave_locked;
+    phase_lock phase_lock_camera(
+        .clk(clk48),
+        .in_reset(camera_wave_reference),
+        .in(divided_edge),
+        .out(camera_wave_locked)
+    );
 
-    // reg [63:0] in_divisor = 1;
-    // reg [63:0] divisor_state;
-    // wire in_divider_reset = divisor_state >= in_divisor;
-    // counter_64bit input_divider(
-    //     .clk(in_edge),
-    //     .out_value(divisor_state),
-    //     .reset(in_divider_reset)
-    // );
-    
-    // reg divided_edge;
-    // pos_edge divider_edge(
-    //     .clk(clk48),
-    //     .in(in_divider_reset),
-    //     .out(divided_edge)
-    // );
 
-    // // Stuff for camera_sync
-    // reg [63:0] camera_hz = 60;
-    // reg [63:0] camera_period_clk48 = 48000000 / camera_hz;
-    // reg [63:0] camera_rate_state;
-    // wire camera_rate = camera_rate_state >= camera_period_clk48;
-    // counter_64bit camera_rate_generator(
-    //     .clk(clk48),
-    //     .out_value(camera_rate_state),
-    //     .reset(camera_rate)
-    // );
 
-    // reg strobe_camera_locked;
-    // phase_lock phase_lock_camera(
-    //     .clk(clk48),
-    //     .in_reset(camera_rate),
-    //     .in(divided_edge),
-    //     .out(strobe_camera_locked)
-    // );
-
-    // reg[63:0] pulse_width = 2400;
-    // pulse_stretch stretch_camera_rate(
-    //     .clk(clk48),
-    //     .in(strobe_camera_locked),
-    //     .length(pulse_width),
-    //     .out_(gpio_13)
-    // );
-    // // assign gpio_13 = camera_rate
-
-    // reg[63:0] pulse_width = 240;
-    // pulse_stretch stretch_output(
-    //     .clk(clk48),
-    //     .in(strobe_camera_locked),
-    //     .length(pulse_width),
-    //     .out_(gpio_0)
-    // );
-
-    // assign gpio_0  = gpio_1;
-
+    reg[63:0] camera_pulse_width = 2400;
+    pulse_stretch stretch_camera_rate(
+        .clk(clk48),
+        .in(camera_wave_locked),
+        .length(camera_pulse_width),
+        .out_(camera_pulse_out)
+    );
 
     // Reset when the onboard button is pressed
     assign rst_n = usr_btn;
@@ -164,17 +172,15 @@ endmodule
 module pulse_stretch (
     input clk,
     input in,
-    input[32:0] length,
+    input[63:0] length,
     output out_
 );
-    reg[32:0] counter;
-    // assign out_ = counter == 0;
+    reg[63:0] counter;
     always @(posedge clk)
         if (in) begin
             counter <= 0;
             out_ <= 1;        
         end else begin
-            // counter <= 1;
             if (counter < length) begin
                 counter <= counter + 1;
             end else begin
@@ -201,6 +207,27 @@ module phase_lock (
         end
     end
 endmodule
+
+// module delay(
+//     input clk
+//     input reg[63:0] length,
+//     input in,
+//     output out
+// );
+//     reg[63:0] state;
+//     reg pulsed;
+//     always @(posedge clk) begin
+//         if (in) begin
+//             state <= length;
+//             pulsed <= 0;
+//         end else if (!pulsed) begin
+//             state <= state + 1;
+//         end
+//         if (state == length) begin
+//             pulsed < 
+//         end
+//     end
+// endmodule
 
 module usr_knob (
     input clk,
@@ -238,85 +265,3 @@ module usr_knob (
         endcase
     end
 endmodule
-
-
-// module pulse_stretch (
-//     input clk,
-//     input in,
-//     input[32:0] length,
-
-//     output out_
-// );
-//     reg[32:0] counter;
-//     always @(posedge clk)
-//         // if (in) begin
-//         //     out_ <= 0;
-//         // end else begin
-//         //     out_ <= 1;
-//         // end
-//         if (in) begin
-//             counter <= length;
-//             out_ <= 1;        
-//         end else begin
-//             if (counter > 0) begin
-//                 counter <= counter - 1;
-//                 out_ <= 1;        
-//             end else begin
-//                 out_ <= 0;        
-//             end
-//         end
-// endmodule
-
-
-
-/*
-
-
-    // assign rgb_led0_r = ~gpio_0;
-    assign rgb_led0_r = ~gpio_0;
-    assign rgb_led0_g = ~gpio_1;
-    assign rgb_led0_b = 1;
-
-
-    // reg clk_hz = 48e6;
-    // reg pulse_width_s = 10e-6;
-    // reg pulse_width = clk_hz * pulse_width_s;
-    reg pulse_width = 480;
-    reg [63:0] period = 480;
-
-    reg [63:0] output_counter;
-    wire period_reset = output_counter > period ? 1 : 0;
-    // 50% duty cycle of LED:
-    wire led_state = (output_counter > period / 2) ? 1 : 0;
-    assign rgb_led0_b = led_state;
-    assign gpio_0 = led_state;
-    counter_64bit period_counter_instantiation(
-        .clk(clk48),
-        .out_value(output_counter),
-        .reset(period_reset)
-    );
-
-    // wire in_debounced;
-    // debounce debounce_input(
-    //     .clk(clk48),
-    //     .in(gpio_1),
-    //     .length(128),
-    //     .out_(gpio_0)
-    // );
-
-    // pulse_stretch stretch_output(
-    //     .clk(clk48),
-    //     .in(gpio_1),
-    //     .length(pulse_width),
-    //     .out_(gpio_0)
-    // );
-*/
-
-    // always @(posedge in_reset) begin
-    //     edge_allowed <= 1;
-    //     // Potential problem: in is positive here.
-    // end
-    // always @(negedge in) begin
-    //     edge_allowed <= 0;
-    // end
-    // assign out = edge_allowed && in;
